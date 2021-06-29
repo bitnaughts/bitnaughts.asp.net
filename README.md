@@ -1,1 +1,7 @@
-# BitSite
+# BitNaughts Mainframe
+
+# Initialize
+
+```
+```
+
