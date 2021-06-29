@@ -21,12 +21,14 @@ namespace BitNaughts
             ILogger log)
         {
             string name = req?.Query["name"], 
+                   user_author = req?.Query["author"],
+                   bot_author = "botnaughts@gmail.com",
                    data = req?.Query["data"], 
                    db_folder = Path.GetTempPath() + "db",
                    logMessage = "";
 
-            if (name == null) 
-                return new BadRequestObjectResult("Missing name!");
+            if (name == null || user_author == null) 
+                return new BadRequestObjectResult("Missing name || author!");
 
             string directory = db_folder + "/" + name + ".txt";
             if (!Directory.Exists(db_folder))  
@@ -58,8 +60,8 @@ namespace BitNaughts
                 repo.Index.Write();
 
                 log.LogInformation("C# HTTP function: Repository.Commit");
-                Signature author = new Signature("Mutilar", "brianhungerman@gmail.com", DateTime.Now);
-                Signature committer = new Signature(System.Environment.GetEnvironmentVariable("GH_USERNAME"), "botnaughts@gmail.com", DateTime.Now);
+                Signature author = new Signature(System.Environment.GetEnvironmentVariable("GH_USERNAME"), user_author, DateTime.Now);
+                Signature committer = new Signature(System.Environment.GetEnvironmentVariable("GH_USERNAME"), bot_author, DateTime.Now);
                 Commit commit = repo.Commit(name, author, committer);
 
                 log.LogInformation("C# HTTP function: Repository.Push");
