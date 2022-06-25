@@ -10,11 +10,101 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using LibGit2Sharp;
+using StackExchange.Redis;
+using System.Reflection;
+
 
 namespace BitNaughts
 {
+    // public class FunctionsAssemblyResolver
+    // {
+    //     public static void RedirectAssembly()
+    //     {
+    //         var list = AppDomain.CurrentDomain.GetAssemblies().OrderByDescending(a => a.FullName).Select(a => a.FullName).ToList();
+    //         AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+    //     }
+
+    //     private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+    //     {
+    //         var requestedAssembly = new AssemblyName(args.Name);
+    //         Assembly assembly = null;
+    //         AppDomain.CurrentDomain.AssemblyResolve -= CurrentDomain_AssemblyResolve;
+    //         try
+    //         {
+    //             assembly = Assembly.Load(requestedAssembly.Name);
+    //         }
+    //         catch (Exception ex)
+    //         {
+    //         }
+    //         AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+    //         return assembly;
+    //     }
+
+    // }
     public static class Mainframe
     {
+        /* Redis Connection Multiplexer */
+        private static Lazy<ConnectionMultiplexer> lazyConnection = CreateConnection();
+        public static ConnectionMultiplexer Connection
+        {
+            get
+            {
+                return lazyConnection.Value;
+            }
+        }
+        private static Lazy<ConnectionMultiplexer> CreateConnection()
+        {
+            return new Lazy<ConnectionMultiplexer>(() =>
+            {
+            var CONNECTION_STRING = System.Environment.GetEnvironmentVariable("REDIS_CONNECTIONSTRING");
+            return ConnectionMultiplexer.Connect(CONNECTION_STRING);
+            });
+        }
+
+        [FunctionName("Ping")]
+        public static async Task<IActionResult> Ping(
+            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "ping")] HttpRequest req,
+            ILogger log)
+        {
+            // FunctionsAssemblyResolver.RedirectAssembly();
+            string telemetry = "Ping()\n";
+            try {
+                // /* Get HTTP headers */
+                string name = req?.Query["name"], data = req?.Query["data"], cursor = req?.Query["cursor"];
+                var db = Connection.GetDatabase();   
+                
+                /* Set player's position*/
+                telemetry += $" SET {name} {data}\n";
+                await db.ExecuteAsync("SET", name, data);
+
+                /* Scan for other players */
+                telemetry += $" SCAN {cursor}\n";
+                var scan_result = await db.ExecuteAsync("SCAN",  cursor);
+                var scan_fi = scan_result.GetType().GetField("_value", BindingFlags.NonPublic|BindingFlags.Instance);
+                var scan_res = (RedisResult[])scan_fi.GetValue(scan_result);
+                var keys = (RedisResult[])scan_res[1];
+                telemetry += $" NextCursor:{scan_res[0]}\n";
+
+                foreach (RedisResult key in keys) {
+                    var key_str = key.ToString();
+                    telemetry += $" Key:{key_str}\n";
+                    if (key_str != name) {
+
+                        /* Get player data */
+                        var player_result = await db.ExecuteAsync("GET", key_str);
+                        var player_fi = player_result.GetType().GetField("_value", BindingFlags.NonPublic|BindingFlags.Instance);
+                        var player_res = player_fi.GetValue(player_result);
+                        telemetry += $" Value:{player_res}\n";
+                    }
+                }
+                // var count = int.Parse(res[0].ToString());
+                // var responseMessage = $"{{count:{count}}}";
+                return new OkObjectResult(telemetry);//telemetry + $"\n{responseMessage}");
+            } catch (Exception e) { 
+                return new OkObjectResult(telemetry + $"\n⚠ Exception {e.ToString()}");
+            }
+        }
+
         [FunctionName("Mainframe")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
