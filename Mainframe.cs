@@ -10,96 +10,42 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using LibGit2Sharp;
-using StackExchange.Redis;
 using System.Reflection;
 
 
 namespace BitNaughts
 {
-    // public class FunctionsAssemblyResolver
-    // {
-    //     public static void RedirectAssembly()
-    //     {
-    //         var list = AppDomain.CurrentDomain.GetAssemblies().OrderByDescending(a => a.FullName).Select(a => a.FullName).ToList();
-    //         AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-    //     }
-
-    //     private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
-    //     {
-    //         var requestedAssembly = new AssemblyName(args.Name);
-    //         Assembly assembly = null;
-    //         AppDomain.CurrentDomain.AssemblyResolve -= CurrentDomain_AssemblyResolve;
-    //         try
-    //         {
-    //             assembly = Assembly.Load(requestedAssembly.Name);
-    //         }
-    //         catch (Exception ex)
-    //         {
-    //         }
-    //         AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-    //         return assembly;
-    //     }
-
-    // }
+    // public class Functions
     public static class Mainframe
     {
-        /* Redis Connection Multiplexer */
-        private static Lazy<ConnectionMultiplexer> lazyConnection = CreateConnection();
-        public static ConnectionMultiplexer Connection
-        {
-            get
-            {
-                return lazyConnection.Value;
-            }
-        }
-        private static Lazy<ConnectionMultiplexer> CreateConnection()
-        {
-            return new Lazy<ConnectionMultiplexer>(() =>
-            {
-            var CONNECTION_STRING = System.Environment.GetEnvironmentVariable("REDIS_CONNECTIONSTRING");
-            return ConnectionMultiplexer.Connect(CONNECTION_STRING);
-            });
-        }
-
+        /*
+            First Pass:  Use Cosmos No-SQL Mongo DB API (1 query to set KVs, 1 query to get all other KVs)
+            Second Pass: Use Redis Key/Value Pairs (1 query to set key, 1 query for key set, N queries for values)
+            Third Pass:  Use Redis Key/Null Value (1 query to set key, 1 query for key set (which has all the values))
+        */
         [FunctionName("Ping")]
         public static async Task<IActionResult> Ping(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "ping")] HttpRequest req,
             ILogger log)
         {
-            // FunctionsAssemblyResolver.RedirectAssembly();
             string telemetry = "Ping()\n";
             try {
-                // /* Get HTTP headers */
+                /* Get HTTP headers */
                 string name = req?.Query["name"], data = req?.Query["data"], cursor = req?.Query["cursor"];
-                var db = Connection.GetDatabase();   
-                
-                /* Set player's position*/
+
+                /* Mongo Connection and TLS */
+                MongoClientSettings settings = MongoClientSettings.FromUrl(new MongoUrl(System.Environment.GetEnvironmentVariable("MONGO_CONNECTIONSTRING")));
+                settings.SslSettings = new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
+                var client = new MongoClient(settings);
+                var database = client.GetDatabase("MultiplayerState");
+
+                /* Set Player's Position*/
                 telemetry += $" SET {name} {data}\n";
-                await db.ExecuteAsync("SET", name, data);
+                database.Collections.Add(data);
 
-                /* Scan for other players */
-                telemetry += $" SCAN {cursor}\n";
-                var scan_result = await db.ExecuteAsync("SCAN",  cursor);
-                var scan_fi = scan_result.GetType().GetField("_value", BindingFlags.NonPublic|BindingFlags.Instance);
-                var scan_res = (RedisResult[])scan_fi.GetValue(scan_result);
-                var keys = (RedisResult[])scan_res[1];
-                telemetry += $" NextCursor:{scan_res[0]}\n";
-
-                foreach (RedisResult key in keys) {
-                    var key_str = key.ToString();
-                    telemetry += $" Key:{key_str}\n";
-                    if (key_str != name) {
-
-                        /* Get player data */
-                        var player_result = await db.ExecuteAsync("GET", key_str);
-                        var player_fi = player_result.GetType().GetField("_value", BindingFlags.NonPublic|BindingFlags.Instance);
-                        var player_res = player_fi.GetValue(player_result);
-                        telemetry += $" Value:{player_res}\n";
-                    }
-                }
-                // var count = int.Parse(res[0].ToString());
-                // var responseMessage = $"{{count:{count}}}";
-                return new OkObjectResult(telemetry);//telemetry + $"\n{responseMessage}");
+                /* Return Other Players' Positions */
+                telemetry += database.Collections.Find();
+                return new OkObjectResult(telemetry);
             } catch (Exception e) { 
                 return new OkObjectResult(telemetry + $"\n⚠ Exception {e.ToString()}");
             }
