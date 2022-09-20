@@ -34,17 +34,19 @@ namespace BitNaughts
                 string name = req?.Query["name"], data = req?.Query["data"], cursor = req?.Query["cursor"];
 
                 /* Mongo Connection and TLS */
-                MongoClientSettings settings = MongoClientSettings.FromUrl(new MongoUrl(System.Environment.GetEnvironmentVariable("MONGO_CONNECTIONSTRING")));
-                settings.SslSettings = new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
-                var client = new MongoClient(settings);
-                var database = client.GetDatabase("MultiplayerState");
+                // MongoClientSettings settings = MongoClientSettings.FromUrl(new MongoUrl(System.Environment.GetEnvironmentVariable("MONGO_CONNECTIONSTRING")));
+                // settings.SslSettings = new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
+                // var client = new MongoClient(settings);
+                // var database = client.GetDatabase("MultiplayerState");
 
                 /* Set Player's Position*/
-                telemetry += $" SET {name} {data}\n";
-                database.Collections.Add(data);
+                // telemetry += $" SET {name} {data}\n";
+                // database.Collections.Add(data);
 
                 /* Return Other Players' Positions */
-                telemetry += database.Collections.Find();
+                // telemetry += database.Collections.Find();
+
+                
                 return new OkObjectResult(telemetry);
             } catch (Exception e) { 
                 return new OkObjectResult(telemetry + $"\n⚠ Exception {e.ToString()}");
