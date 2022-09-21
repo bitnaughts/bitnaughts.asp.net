@@ -7985,6 +7985,7 @@
       "LibGit2Sharp >= 0.26.2",
       "Microsoft.AspNetCore >= 2.2.0",
       "Microsoft.AspNetCore.Mvc.Core >= 2.2.5",
+      "Microsoft.Azure.Functions.Analyzers >= 1.0.0",
       "Microsoft.Azure.WebJobs >= 3.0.33",
       "Microsoft.Azure.WebJobs.Extensions.Http >= 3.0.12",
       "Microsoft.Extensions.Primitives >= 2.2.0",
@@ -8040,6 +8041,10 @@
           "Microsoft.AspNetCore.Mvc.Core": {
             "target": "Package",
             "version": "[2.2.5, )"
+          },
+          "Microsoft.Azure.Functions.Analyzers": {
+            "target": "Package",
+            "version": "[1.0.0, )"
           },
           "Microsoft.Azure.WebJobs": {
             "target": "Package",
