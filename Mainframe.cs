@@ -44,7 +44,7 @@ namespace BitNaughts
                 telemetry += "Mongo Output";
                 var filter = Builders<BsonDocument>.Filter.Eq("name", name);
                 var update = Builders<BsonDocument>.Update
-                .Set("data", data)
+                .Set("data", data);
                 var options = new UpdateOptions();
                 options.IsUpsert = true;
                 collection.UpdateOne(
@@ -54,7 +54,10 @@ namespace BitNaughts
                 );
                 foreach (var documentout in collection.Find(new BsonDocument()).ToList())
                 {
-                    telemetry += documentout + "♖";
+                    if(documentout["name"] != name)
+                    {
+                        telemetry += documentout + "♖";
+                    }
                 }
                 return new OkObjectResult(telemetry);
             } catch (Exception e) { 
