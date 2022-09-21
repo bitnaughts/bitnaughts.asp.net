@@ -58,7 +58,7 @@ namespace BitNaughts
                 };
                 foreach (var documentout in collection.Find(new BsonDocument()).ToCursor().ToEnumerable())
                 {
-                    telemetry += documentout + "\n\n";   
+                    telemetry += documentout + "\n";   
                 }
                 return new OkObjectResult(telemetry);
             } catch (Exception e) { 
