@@ -56,19 +56,10 @@ namespace BitNaughts
                     { "name", name },
                     { "data", data }
                 };
-                // collection.InsertOne(document);
                 foreach (var documentout in collection.Find(new BsonDocument()).ToCursor().ToEnumerable())
                 {
                     telemetry += documentout + "\n\n";   
                 }
-                /* Set Player's Position*/
-                // telemetry += $" SET {name} {data}\n";
-                // database.Collections.Add(data);
-
-                /* Return Other Players' Positions */
-                // telemetry += database.Collections.Find();
-
-                
                 return new OkObjectResult(telemetry);
             } catch (Exception e) { 
                 return new OkObjectResult(telemetry + $"\n⚠ Exception {e.ToString()}");
