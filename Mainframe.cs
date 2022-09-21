@@ -17,59 +17,49 @@ using MongoDB.Driver;
 
 namespace BitNaughts
 {
-    // public class Functions
     public static class Mainframe
     {
-        /*
-            First Pass:  Use Cosmos No-SQL Mongo DB API (1 query to set KVs, 1 query to get all other KVs)
-            Second Pass: Use Redis Key/Value Pairs (1 query to set key, 1 query for key set, N queries for values)
-            Third Pass:  Use Redis Key/Null Value (1 query to set key, 1 query for key set (which has all the values))
-        */
         [FunctionName("Ping")]
         public static async Task<IActionResult> Ping(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "ping")] HttpRequest req,
-            ILogger log)
-        {
+            ILogger log) {
             string telemetry = "Ping()\n";
             try {
                 /* Get HTTP headers */
                 string name = req?.Query["name"], data = req?.Query["data"];
+                if (name == null || data == null) return new OkObjectResult("⚠ Exception: Name/Data missing;");
 
                 /* Mongo Connection and TLS */
                 MongoClientSettings settings = MongoClientSettings.FromUrl(new MongoUrl(System.Environment.GetEnvironmentVariable("MONGO_CONNECTIONSTRING")));
                 settings.SslSettings = new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
                 var client = new MongoClient(settings);
+                
+                /* Mongo Database and Collection */
                 var database = client.GetDatabase("MultiplayerState");
                 var collection = database.GetCollection<BsonDocument>("MultiplayerStateTest");
-                telemetry += "Mongo Output";
+                
+                /* Mongo Update or Insert */
                 var filter = Builders<BsonDocument>.Filter.Eq("name", name);
-                var update = Builders<BsonDocument>.Update
-                .Set("data", data);
-                var options = new UpdateOptions();
-                options.IsUpsert = true;
-                collection.UpdateOne(
-                    filter,
-                    update,
-                    options
-                );
-                foreach (var documentout in collection.Find(new BsonDocument()).ToList())
+                var update = Builders<BsonDocument>.Update.Set("data", data);
+                var options = new UpdateOptions(); options.IsUpsert = true;
+                collection.UpdateOne(filter, update, options);
+                
+                /* Mongo Output */
+                telemetry += "Mongo Output";
+                foreach (var structure in collection.Find(new BsonDocument()).ToList())
                 {
-                    if(documentout["name"] != name)
-                    {
-                        telemetry += documentout + "♖";
-                    }
+                    if(structure["name"] != name) telemetry += structure + "♖"; 
                 }
                 return new OkObjectResult(telemetry);
             } catch (Exception e) { 
-                return new OkObjectResult(telemetry + $"\n⚠ Exception {e.ToString()}");
+                return new OkObjectResult(telemetry + $"⚠ Exception: {e.ToString()}");
             }
         }
 
         [FunctionName("Mainframe")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
-            ILogger log)
-        {
+            ILogger log) {
             string telemetry = "\n~ Mainframe";
             try {
                 string name = req?.Query["name"], 
