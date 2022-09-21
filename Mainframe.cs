@@ -11,7 +11,9 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using LibGit2Sharp;
 using System.Reflection;
-
+using System.Security.Authentication;
+using MongoDB.Bson;
+using MongoDB.Driver;
 
 namespace BitNaughts
 {
@@ -31,14 +33,34 @@ namespace BitNaughts
             string telemetry = "Ping()\n";
             try {
                 /* Get HTTP headers */
-                string name = req?.Query["name"], data = req?.Query["data"], cursor = req?.Query["cursor"];
+                string name = req?.Query["name"], data = req?.Query["data"];
 
                 /* Mongo Connection and TLS */
-                // MongoClientSettings settings = MongoClientSettings.FromUrl(new MongoUrl(System.Environment.GetEnvironmentVariable("MONGO_CONNECTIONSTRING")));
-                // settings.SslSettings = new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
-                // var client = new MongoClient(settings);
-                // var database = client.GetDatabase("MultiplayerState");
-
+                MongoClientSettings settings = MongoClientSettings.FromUrl(new MongoUrl(System.Environment.GetEnvironmentVariable("MONGO_CONNECTIONSTRING")));
+                settings.SslSettings = new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
+                var client = new MongoClient(settings);
+                var database = client.GetDatabase("MultiplayerState");
+                var collection = database.GetCollection<BsonDocument>("MultiplayerStateTest");
+                telemetry += "Mongo Output";
+                var filter = Builders<BsonDocument>.Filter.Eq("name", name);
+                var update = Builders<BsonDocument>.Update.Set("data", data);
+                var options = new UpdateOptions();
+                options.IsUpsert = true;
+                collection.UpdateOne(
+                    filter,
+                    update,
+                    options
+                );
+                var document = new BsonDocument
+                {
+                    { "name", name },
+                    { "data", data }
+                };
+                // collection.InsertOne(document);
+                foreach (var documentout in collection.Find(new BsonDocument()).ToCursor().ToEnumerable())
+                {
+                    telemetry += documentout + "\n\n";   
+                }
                 /* Set Player's Position*/
                 // telemetry += $" SET {name} {data}\n";
                 // database.Collections.Add(data);
