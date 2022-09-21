@@ -43,7 +43,8 @@ namespace BitNaughts
                 var collection = database.GetCollection<BsonDocument>("MultiplayerStateTest");
                 telemetry += "Mongo Output";
                 var filter = Builders<BsonDocument>.Filter.Eq("name", name);
-                var update = Builders<BsonDocument>.Update.Set("data", data);
+                var update = Builders<BsonDocument>.Update
+                .Set("data", data)
                 var options = new UpdateOptions();
                 options.IsUpsert = true;
                 collection.UpdateOne(
@@ -51,14 +52,9 @@ namespace BitNaughts
                     update,
                     options
                 );
-                var document = new BsonDocument
+                foreach (var documentout in collection.Find(new BsonDocument()).ToList())
                 {
-                    { "name", name },
-                    { "data", data }
-                };
-                foreach (var documentout in collection.Find(new BsonDocument()).ToCursor().ToEnumerable())
-                {
-                    telemetry += documentout + "\n";   
+                    telemetry += documentout + "♖";
                 }
                 return new OkObjectResult(telemetry);
             } catch (Exception e) { 

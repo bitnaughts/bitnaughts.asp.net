@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="LibGit2Sharp" Version="0.26.2" />
+    <PackageReference Include="Microsoft.Azure.Functions.Analyzers" Version="1.0.0" />
     <PackageReference Include="Microsoft.Extensions.Primitives" Version="2.2.0" />
     <PackageReference Include="Microsoft.Net.Http.Headers" Version="2.2.8" />
     <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.13" />
