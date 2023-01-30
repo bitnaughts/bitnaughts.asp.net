@@ -133,3 +133,32 @@ namespace BitNaughts
         }
     }
 }
+
+
+
+public CloneOptions cloningSSHAuthentication(string username, string path_to_public_key_file, string path_to_private_key_file)
+    {
+        CloneOptions options = new CloneOptions();
+        SshUserKeyCredentials credentials = new SshUserKeyCredentials();
+        credentials.Username = username;
+        credentials.PublicKey = path_to_public_key_file;
+        credentials.PrivateKey =  path_to_private_key_file;
+        credentials.Passphrase = "ssh_key_password";
+        options.CredentialsProvider = new LibGit2Sharp.Handlers.CredentialsHandler((url, usernameFromUrl, types) =>  credentials) ;
+        return options;
+    }
+
+public CloneOptions cloneSSHAgent(string username){
+        CloneOptions options = new CloneOptions();
+        SshAgentCredentials credentials = new SshAgentCredentials();
+        credentials.Username = username;
+        var handl688er = new LibGit2Sharp.Handlers.CredentialsHandler((url, usernameFromUrl, types) => credentials);
+        options.CredentialsProvider = handler;
+        return options;
+
+}
+
+public void CloneRepo(string remotePath, string localPath){
+    CloneOptions options = cloningSSHAuthentication("git", "C:\\folder\\id_rsa.pub", "C:\\folder\\id_rsa");
+    Repository.Clone(remotePath, localPath, options);
+}
